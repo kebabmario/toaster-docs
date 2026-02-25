@@ -48,16 +48,20 @@ body {
 
 /* ─── Search ─────────────────────────────────────────────── */
 
+.search-wrapper {
+  position: relative;
+}
+
 .search {
   background: #111318;
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #e5e7eb;
-  padding: 6px 12px;
+  padding: 6px 12px 6px 34px;
   border-radius: 8px;
   font-size: 13px;
-  width: 220px;
+  width: 240px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, width 0.25s;
 }
 
 .search::placeholder {
@@ -67,6 +71,130 @@ body {
 .search:focus {
   border-color: rgba(99, 102, 241, 0.6);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  width: 300px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+/* ─── Search Dropdown ────────────────────────────────────── */
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 380px;
+  background: #13151e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.3),
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(99, 102, 241, 0.08);
+  z-index: 200;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.search-dropdown.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+
+.search-dropdown-header {
+  padding: 10px 14px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.search-result {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.12s;
+  text-decoration: none;
+}
+
+.search-result:last-child {
+  border-bottom: none;
+}
+
+.search-result:hover,
+.search-result.highlighted {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.search-result-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-result-title mark {
+  background: rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  border-radius: 3px;
+  padding: 0 2px;
+  font-style: normal;
+}
+
+.search-result-section {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(99, 102, 241, 0.7);
+  margin-bottom: 4px;
+}
+
+.search-result-excerpt {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.55;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result-excerpt mark {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.search-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 13px;
+}
+
+.search-empty-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
 }
 
 /* ─── GitHub icon button ─────────────────────────────────── */
@@ -137,7 +265,7 @@ body {
   min-width: 0;
 }
 
-doc {
+.doc {
   max-width: 780px;
 }
 
@@ -244,7 +372,7 @@ hr {
 
 /* ─── TOC ────────────────────────────────────────────────── */
 
-toc {
+.toc {
   border-left: 1px solid rgba(255, 255, 255, 0.07);
   padding: 28px 20px;
   font-size: 13px;

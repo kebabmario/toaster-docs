@@ -256,14 +256,14 @@ const pages = {
     toc: ["Infrastructure", "Open source"],
     content: `
       <p class="lead">
-        Toaster is powered Cloudflare and GitHub.
+        Toaster is powered by Cloudflare and GitHub.
       </p>
 
       <hr />
 
       <h2>Infrastructure</h2>
       <p>
-        Cloudflare speed test endpoints are used to delivered via distributed edge networks,
+        Cloudflare speed test endpoints are delivered via distributed edge networks,
         ensuring low latency and global availability.
       </p>
       <p>
@@ -286,9 +286,208 @@ const pages = {
   }
 };
 
+// ─── Build a flat search index from all pages ────────────────────────────────
+
+const searchIndex = [];
+
+Object.entries(pages).forEach(([key, page]) => {
+  // Index the page title itself
+  searchIndex.push({
+    page: key,
+    title: page.title,
+    section: null,
+    excerpt: page.toc.join(" · ")
+  });
+
+  // Index each h2 section by stripping HTML from content
+  const tmp = document.createElement("div");
+  tmp.innerHTML = page.content;
+  const headings = tmp.querySelectorAll("h2");
+  headings.forEach(h2 => {
+    const sectionTitle = h2.textContent.trim();
+    let excerpt = "";
+    let sibling = h2.nextElementSibling;
+    while (sibling && sibling.tagName !== "H2" && sibling.tagName !== "HR") {
+      if (sibling.tagName === "P") {
+        excerpt += sibling.textContent.trim() + " ";
+      }
+      sibling = sibling.nextElementSibling;
+    }
+    searchIndex.push({
+      page: key,
+      title: page.title,
+      section: sectionTitle,
+      excerpt: excerpt.trim().slice(0, 120)
+    });
+  });
+});
+
+// ─── Search logic ─────────────────────────────────────────────────────────────
+
+const PAGE_ICONS = {
+  introduction: "📖",
+  installation: "⚙️",
+  usage: "▶️",
+  accuracy: "🎯",
+  privacy: "🔒",
+  credits: "✨"
+};
+
+function highlight(text, query) {
+  if (!query) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\\]\]/g, "\\$&");
+  return text.replace(new RegExp(`(${escaped})`, "gi"), "<mark>$1</mark>");
+}
+
+function runSearch(query) {
+  if (!query || query.length < 2) return [];
+  const q = query.toLowerCase();
+  return searchIndex
+    .filter(item => {
+      const haystack = [item.title, item.section, item.excerpt]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    })
+    .slice(0, 8);
+}
+
+// ─── Dropdown rendering ───────────────────────────────────────────────────────
+
+const searchInput = document.getElementById("search-input");
+const dropdown = document.getElementById("search-dropdown");
+let activeIndex = -1;
+let currentResults = [];
+
+function renderDropdown(query) {
+  const results = runSearch(query);
+  currentResults = results;
+  activeIndex = -1;
+  dropdown.innerHTML = "";
+
+  if (!query || query.length < 2) {
+    dropdown.classList.add("hidden");
+    return;
+  }
+
+  if (results.length === 0) {
+    dropdown.innerHTML = `
+      <div class="search-empty">
+        <div class="search-empty-icon">🔍</div>
+        No results for <strong>"${query}"</strong>
+      </div>`;
+    dropdown.classList.remove("hidden");
+    return;
+  }
+
+  const header = document.createElement("div");
+  header.className = "search-dropdown-header";
+  header.textContent = \
+  `${results.length} result${results.length !== 1 ? "s" : ""}`;
+  dropdown.appendChild(header);
+
+  results.forEach((item, i) => {
+    const el = document.createElement("div");
+    el.className = "search-result-item";
+    el.dataset.index = i;
+
+    const label = item.section ? item.section : item.title;
+    const subLabel = item.section ? item.title : item.excerpt;
+
+    el.innerHTML = `
+      <div class="search-result-icon">${PAGE_ICONS[item.page] || "📄"}</div>
+      <div class="search-result-body">
+        <div class="search-result-title">${highlight(label, query)}</div>
+        <div class="search-result-excerpt">${highlight(subLabel || "", query)}</div>
+      </div>
+      <div class="search-result-tag">${item.title}</div>
+    `;
+
+    el.addEventListener("mousedown", e => {
+      e.preventDefault();
+      navigateTo(item);
+    });
+
+    dropdown.appendChild(el);
+  });
+
+  const footer = document.createElement("div");
+  footer.className = "search-footer";
+  footer.innerHTML = `
+    <span class="search-footer-hint"><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+    <span class="search-footer-hint"><kbd>↵</kbd> select</span>
+    <span class="search-footer-hint"><kbd>Esc</kbd> close</span>
+  `;
+  dropdown.appendChild(footer);
+
+  dropdown.classList.remove("hidden");
+}
+
+function setActive(index) {
+  const items = dropdown.querySelectorAll(".search-result-item");
+  items.forEach(el => el.classList.remove("active"));
+  if (index >= 0 && index < items.length) {
+    items[index].classList.add("active");
+    items[index].scrollIntoView({ block: "nearest" });
+  }
+  activeIndex = index;
+}
+
+function navigateTo(item) {
+  loadPage(item.page);
+  closeDropdown();
+  searchInput.value = "";
+}
+
+function closeDropdown() {
+  dropdown.classList.add("hidden");
+  activeIndex = -1;
+  currentResults = [];
+}
+
+searchInput.addEventListener("input", e => {
+  renderDropdown(e.target.value.trim());
+});
+
+searchInput.addEventListener("keydown", e => {
+  const items = dropdown.querySelectorAll(".search-result-item");
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    setActive(Math.min(activeIndex + 1, items.length - 1));
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    setActive(Math.max(activeIndex - 1, 0));
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (activeIndex >= 0 && currentResults[activeIndex]) {
+      navigateTo(currentResults[activeIndex]);
+    } else if (currentResults.length > 0) {
+      navigateTo(currentResults[0]);
+    }
+  } else if (e.key === "Escape") {
+    closeDropdown();
+    searchInput.blur();
+  }
+});
+
+document.addEventListener("mousedown", e => {
+  if (!e.target.closest(".search-wrapper")) {
+    closeDropdown();
+  }
+});
+
+searchInput.addEventListener("focus", () => {
+  if (searchInput.value.trim().length >= 2) {
+    renderDropdown(searchInput.value.trim());
+  }
+});
+
+// ─── Page navigation ──────────────────────────────────────────────────────────
+
 const navItems = document.querySelectorAll(".nav");
-const doc = document.querySelector(".doc");
-const toc = document.querySelector(".toc");
+const doc = document.getElementById("doc");
+const toc = document.getElementById("toc");
 
 function loadPage(key) {
   const page = pages[key];
@@ -297,7 +496,6 @@ function loadPage(key) {
   navItems.forEach(n => n.classList.remove("active"));
   document.querySelector(`.nav[data-page="${key}"]`)?.classList.add("active");
 
-  // Fade out
   doc.style.opacity = 0;
 
   setTimeout(() => {
@@ -316,7 +514,6 @@ function loadPage(key) {
       <p class="updated">Last updated on February 11, 2026</p>
     `;
 
-    // Fade in
     doc.style.opacity = 1;
 
     toc.innerHTML = `<p class="toc-title">On this page</p>`;

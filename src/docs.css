@@ -435,3 +435,31 @@ hr {
 .powered-by:hover img {
   opacity: 1;
 }
+
+/* ─── Mobile Layout Fix ─────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 240px 1fr;
+  }
+
+  .toc {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: relative;
+    height: auto;
+    border-right: none;
+  }
+
+  .content {
+    padding: 32px 20px 60px;
+  }
+}
